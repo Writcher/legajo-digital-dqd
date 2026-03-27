@@ -91,10 +91,29 @@ type FormPayload = {
   idiomas: number[]
 }
 
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      secret: process.env.TURNSTILE_SECRET_KEY!,
+      response: token,
+    }),
+  })
+  const json = await res.json()
+  return json.success === true
+}
+
 export async function submitLegajo(formData: FormData): Promise<{ error?: string }> {
   try {
     const cv = formData.get('cv') as File
+    const turnstileToken = formData.get('turnstileToken') as string
     const data = JSON.parse(formData.get('data') as string) as FormPayload
+
+    // Verificar Turnstile
+    if (!turnstileToken || !(await verifyTurnstile(turnstileToken))) {
+      return { error: 'Verificación de seguridad fallida. Por favor recargá la página e intentá de nuevo.' }
+    }
 
     // Validación server-side del CV
     if (!cv || cv.size === 0) return { error: 'CV requerido' }

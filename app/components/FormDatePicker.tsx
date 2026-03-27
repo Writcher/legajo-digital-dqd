@@ -1,17 +1,19 @@
-import { Controller, Control, Path, RegisterOptions, FieldValues } from "react-hook-form";
+import { Controller, Control, Path, RegisterOptions, FieldValues, useFormContext } from "react-hook-form";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 
-export default function FormDatePicker<T extends FieldValues>({ name, control, label, rules, className, monthYear }: {
+export default function FormDatePicker<T extends FieldValues>({ name, control, label, rules, className, monthYear, onChangeExtra }: {
   name: Path<T>;
   control: Control<T>;
   label: string;
   rules?: RegisterOptions<T>;
   className?: string;
   monthYear?: boolean;
+  onChangeExtra?: () => void;
 }) {
+  const { trigger } = useFormContext();
   const format = monthYear ? "MM-YYYY" : "DD-MM-YYYY";
 
   return (
@@ -29,6 +31,8 @@ export default function FormDatePicker<T extends FieldValues>({ name, control, l
             value={value ? dayjs(value, format) : null}
             onChange={(newValue) => {
               onChange(newValue ? newValue.format(format) : "");
+              trigger(name);
+              onChangeExtra?.();
             }}
             format={format}
             slotProps={{

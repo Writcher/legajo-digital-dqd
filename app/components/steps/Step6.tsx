@@ -24,21 +24,23 @@ const MAX_CV_SIZE = 5 * 1024 * 1024;
 export default function Step6({
   onBack,
   onSuccess,
+  turnstileToken,
 }: {
   onBack: () => void;
   onSuccess: (nombre: string) => void;
+  turnstileToken: string;
 }) {
   // hooks
   const { showWarning, showSuccess, showError } = useSnackbar();
   const form = useFormContext<LegajoFormData>();
   const idiomas = useWatch({ control: form.control, name: 'idiomas' });
-  const [inputIdiomas, setInputIdiomas] = useState('');
   const disponibilidadSeleccionada = useWatch({ control: form.control, name: 'disponibilidad' });
   const cv = useWatch({ control: form.control, name: 'cv' });
   const [dragging, setDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  //helpers
   function handleCvFile(file: File | null | undefined) {
     if (!file) return;
     if (file.type !== 'application/pdf') { showWarning('Solo se aceptan archivos PDF'); return; }
@@ -55,6 +57,7 @@ export default function Step6({
       const values = form.getValues();
       const fd = new FormData();
       fd.append('cv', values.cv!);
+      fd.append('turnstileToken', turnstileToken);
       const { cv: _cv, ...rest } = values;
       fd.append('data', JSON.stringify(rest));
       const result = await submitLegajo(fd);
@@ -101,7 +104,7 @@ export default function Step6({
   }, [showWarning, idiomasQuery.isError, disponibilidades.isError])
   const seleccionadas = idiomasQuery.data?.filter(i => idiomas.includes(i.id)) ?? [];
   return (
-    <StepWrapper onBack={onBack} isLast onSubmit={handleSubmit} isSubmitting={isSubmitting} title='Disponibilidad' subtitle='Para asignacion a proyectos en otras provincias'>
+    <StepWrapper onBack={onBack} isLast onSubmit={handleSubmit} isSubmitting={isSubmitting} title='Disponibilidad' subtitle='Para asignacion a proyectos en otras provincias' isValid={form.formState.isValid}>
       <div className='text-sm text-gray-700 leading-tight'>
         Disponibilidad Para Viajar
       </div>

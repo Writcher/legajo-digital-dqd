@@ -71,15 +71,22 @@ export default function Step5({
     if (niveles.isError) showWarning('Error cargando niveles educativos');
   }, [showWarning, niveles.isError]);
   return (
-    <StepWrapper onNext={onNext} onBack={onBack} title='Formación y Certificaciones' subtitle='Títulos, cursos y habilitaciones'>
+    <StepWrapper onNext={onNext} onBack={onBack} title='Formación y Certificaciones' subtitle='Títulos, cursos y habilitaciones' isValid={form.formState.isValid}>
       <div className='flex flex-col w-full gap-2 overflow-auto'>
         {array.fields.map((field, index) => (
           <div key={field.id} className='flex flex-col gap-4 border border-orange-500 p-4 rounded'>
-            <FormSelect name={`educaciones.${index}.nivel` as const} control={form.control} label='Nivel Educativo' options={niveles.data ?? []} isLoading={niveles.isLoading} />
-            <FormField name={`educaciones.${index}.titulo` as const} control={form.control} label='Título o Carrera' />
-            <FormField name={`educaciones.${index}.institucion` as const} control={form.control} label='Institución' />
+            <FormSelect name={`educaciones.${index}.nivel` as const} control={form.control} label='Nivel Educativo' options={niveles.data ?? []} isLoading={niveles.isLoading} rules={{ required: 'Campo obligatorio' }} />
+            <FormField name={`educaciones.${index}.titulo` as const} control={form.control} label='Título o Carrera' rules={{ required: 'Campo obligatorio' }} />
+            <FormField name={`educaciones.${index}.institucion` as const} control={form.control} label='Institución' rules={{ required: 'Campo obligatorio' }} />
             <div className='flex w-full gap-2'>
-              <FormDatePicker name={`educaciones.${index}.desde` as const} control={form.control} label='Inicio' monthYear />
+              <FormDatePicker name={`educaciones.${index}.desde` as const} control={form.control} label='Inicio' monthYear onChangeExtra={() => form.trigger(`educaciones.${index}.hasta`)} rules={{ required: 'Campo obligatorio', validate: (v) => {
+                if (!v || typeof v !== 'string') return true;
+                const [dM, dY] = v.split('-').map(Number);
+                const now = new Date();
+                const nowY = now.getFullYear();
+                const nowM = now.getMonth() + 1;
+                return dY < nowY || (dY === nowY && dM <= nowM) || '"Inicio" no puede ser en el futuro';
+              }}} />
               <FormDatePicker name={`educaciones.${index}.hasta` as const} control={form.control} label='Final' monthYear rules={{ validate: (v) => {
                 if (!v || typeof v !== 'string') return true;
                 const desde = form.getValues(`educaciones.${index}.desde`);

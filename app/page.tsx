@@ -8,6 +8,7 @@ import Step3 from './components/steps/Step3';
 import Step4 from './components/steps/Step4';
 import Step5 from './components/steps/Step5';
 import Step6 from './components/steps/Step6';
+import LandingPage from './components/LandingPage';
 import { FormProvider, useForm } from 'react-hook-form';
 
 export type Experiencia = {
@@ -59,12 +60,15 @@ export type LegajoFormData = {
 
 export default function Home() {
   //state
+  const [formType, setFormType] = useState<'empleado' | 'postulante' | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [activeStep, setActiveStep] = useState(0);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
   const next = () => setActiveStep((s) => s + 1);
   const back = () => setActiveStep((s) => s - 1);
   //hooks
   const form = useForm<LegajoFormData>({
+    mode: 'onTouched',
     defaultValues: {
       //step1
       nombre: '',
@@ -95,6 +99,10 @@ export default function Home() {
       cv: null
     }
   });
+  if (formType === null) {
+    return <LandingPage onSelect={(type, token) => { setFormType(type); setTurnstileToken(token); }} />;
+  }
+
   if (submittedName !== null) {
     return (
       <div className='flex flex-col flex-1 items-center justify-center gap-6 px-4 text-center'>
@@ -131,12 +139,12 @@ export default function Home() {
         </div>
         <div className='flex flex-col flex-1 w-full max-w-[600px] items-center px-4 pb-10'>
           <FormProvider {...form}>
-            {activeStep === 0 && <Step1 onNext={next} />}
+            {activeStep === 0 && <Step1 onNext={next} isPostulante={formType === 'postulante'} />}
             {activeStep === 1 && <Step2 onNext={next} onBack={back} />}
             {activeStep === 2 && <Step3 onNext={next} onBack={back} />}
             {activeStep === 3 && <Step4 onNext={next} onBack={back} />}
             {activeStep === 4 && <Step5 onNext={next} onBack={back} />}
-            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} />}
+            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} turnstileToken={turnstileToken} />}
           </FormProvider>
         </div>
       </div>
