@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import FormStepper from '@/components/common/FormStepper';
 import Step1 from '@/components/steps/Step1';
 import Step2 from '@/components/steps/Step2';
@@ -11,12 +11,30 @@ import Step6 from '@/components/steps/Step6';
 import LandingPage from '@/components/landing';
 import { FormProvider, useForm } from 'react-hook-form';
 import { LegajoFormData } from '@/lib/types/legajo';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
 export default function Home() {
   //state
   const [formType, setFormType] = useState<'empleado' | 'postulante' | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [activeStep, setActiveStep] = useState(0);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const tokenResolverRef = useRef<((token: string) => void) | null>(null);
+
+  const handleTurnstileSuccess = useCallback((token: string) => {
+    setTurnstileToken(token);
+    if (tokenResolverRef.current) {
+      tokenResolverRef.current(token);
+      tokenResolverRef.current = null;
+    }
+  }, []);
+
+  const refreshTurnstileToken = useCallback((): Promise<string> => {
+    return new Promise((resolve) => {
+      tokenResolverRef.current = resolve;
+      turnstileRef.current?.reset();
+    });
+  }, []);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
   const next = () => setActiveStep((s) => s + 1);
   const back = () => setActiveStep((s) => s - 1);
@@ -54,7 +72,17 @@ export default function Home() {
     }
   });
   if (formType === null) {
-    return <LandingPage onSelect={(type, token) => { setFormType(type); setTurnstileToken(token); }} />;
+    return (
+      <LandingPage onSelect={(type) => setFormType(type)} token={turnstileToken}>
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+          onSuccess={handleTurnstileSuccess}
+          onExpire={() => setTurnstileToken('')}
+          onError={() => setTurnstileToken('')}
+        />
+      </LandingPage>
+    );
   }
 
   if (submittedName !== null) {
@@ -98,9 +126,18 @@ export default function Home() {
             {activeStep === 2 && <Step3 onNext={next} onBack={back} />}
             {activeStep === 3 && <Step4 onNext={next} onBack={back} />}
             {activeStep === 4 && <Step5 onNext={next} onBack={back} />}
-            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} turnstileToken={turnstileToken} />}
+            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} refreshTurnstileToken={refreshTurnstileToken} />}
           </FormProvider>
         </div>
+      </div>
+      <div style={{ position: 'absolute', left: '-9999px' }}>
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+          onSuccess={handleTurnstileSuccess}
+          onExpire={() => setTurnstileToken('')}
+          onError={() => setTurnstileToken('')}
+        />
       </div>
     </>
   );

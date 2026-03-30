@@ -23,11 +23,11 @@ const disponibilidadEmoji: Record<string, React.ReactNode> = {
 export default function Step6({
   onBack,
   onSuccess,
-  turnstileToken,
+  refreshTurnstileToken,
 }: {
   onBack: () => void;
   onSuccess: (nombre: string) => void;
-  turnstileToken: string;
+  refreshTurnstileToken: () => Promise<string>;
 }) {
   // hooks
   const { showWarning, showSuccess, showError } = useSnackbar();
@@ -47,25 +47,41 @@ export default function Step6({
     form.setValue('cv', file, { shouldValidate: true });
   }
   async function handleSubmit() {
+    // Evita envíos duplicados si el usuario hace doble click
     if (submittingRef.current) return;
+    // Validaciones manuales antes de enviar
     if (!cv) { showWarning('Por favor adjuntá tu CV'); return; }
     if (!disponibilidadSeleccionada) { showWarning('Por favor seleccioná tu disponibilidad para viajar'); return; }
+    // Marca el envío como en curso (ref + state para UI)
     submittingRef.current = true;
     setIsSubmitting(true);
     try {
+      // Refresca el token de Turnstile para que no esté vencido
+      const freshToken = await refreshTurnstileToken();
+      // Obtiene todos los valores del formulario (todos los steps)
       const values = form.getValues();
+      // Arma el FormData para enviar al server action
       const fd = new FormData();
+      // Adjunta el archivo PDF del CV
       fd.append('cv', values.cv!);
-      fd.append('turnstileToken', turnstileToken);
+      // Adjunta el token fresco de Turnstile para verificación server-side
+      fd.append('turnstileToken', freshToken);
+      // Separa el CV del resto de los datos (el CV ya se adjuntó como archivo)
       const { cv: _cv, ...rest } = values;
+      // Adjunta el resto de los datos como JSON
       fd.append('data', JSON.stringify(rest));
+      // Llama al server action que guarda el legajo en la base de datos
       const result = await submitLegajo(fd);
+      // Si el server devuelve un error, lo lanza para que lo atrape el catch
       if (result.error) throw new Error(result.error);
+      // Muestra feedback de éxito y navega a la pantalla de confirmación
       showSuccess('¡Legajo enviado correctamente!');
       onSuccess(values.nombre);
     } catch (err) {
+      // Muestra el error al usuario (el del server o uno genérico)
       showError(err instanceof Error ? err.message : 'Error al enviar el legajo');
     } finally {
+      // Libera el lock de envío pase lo que pase
       submittingRef.current = false;
       setIsSubmitting(false);
     }

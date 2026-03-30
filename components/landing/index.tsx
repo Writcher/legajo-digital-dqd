@@ -1,18 +1,18 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@mui/material';
 import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
 import PersonSearchRoundedIcon from '@mui/icons-material/PersonSearchRounded';
-import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LandingPage({
   onSelect,
+  token,
+  children,
 }: {
-  onSelect: (type: 'empleado' | 'postulante', token: string) => void;
+  onSelect: (type: 'empleado' | 'postulante') => void;
+  token: string;
+  children?: React.ReactNode;
 }) {
-  const [token, setToken] = useState<string | null>(null);
-
   return (
     <>
       <div className='flex w-full h-1'>
@@ -26,12 +26,7 @@ export default function LandingPage({
           </p>
         </div>
 
-        <Turnstile
-          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-          onSuccess={(t) => setToken(t)}
-          onExpire={() => setToken(null)}
-          onError={() => setToken(null)}
-        />
+        {children}
 
         <div className='flex flex-col sm:flex-row gap-4 w-full max-w-[420px]'>
           <Button
@@ -41,7 +36,7 @@ export default function LandingPage({
             disableElevation
             disabled={!token}
             startIcon={<BadgeRoundedIcon />}
-            onClick={() => onSelect('empleado', token!)}
+            onClick={() => onSelect('empleado')}
           >
             Soy empleado/a
           </Button>
@@ -52,7 +47,7 @@ export default function LandingPage({
             disableElevation
             disabled={!token}
             startIcon={<PersonSearchRoundedIcon />}
-            onClick={() => onSelect('postulante', token!)}
+            onClick={() => onSelect('postulante')}
           >
             Soy postulante
           </Button>
