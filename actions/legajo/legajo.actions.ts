@@ -6,11 +6,11 @@ import type { FormPayload } from '@/lib/types/legajo'
 import { MAX_CV_SIZE } from '@/lib/constants'
 import { parseMonthYear } from '@/lib/utils/parseMonthYear'
 import { verifyTurnstile } from '@/actions/turnstile/turnstile.actions'
-import { getGraphToken, uploadCvToSharePoint } from '@/actions/graphApi/graphApi.actions'
+import { getGraphToken, uploadFilesToSharePoint } from '@/actions/graphApi/graphApi.actions'
 
-export async function submitLegajo(formData: FormData): Promise<{ error?: string }> {
+export async function submitLegajo(formData: FormData, isPostulante: boolean): Promise<{ error?: string }> {
   try {
-    const cv = formData.get('cv') as File
+    const archivos = formData.getAll('archivos') as File[]
     const turnstileToken = formData.get('turnstileToken') as string
     const data = JSON.parse(formData.get('data') as string) as FormPayload
 
@@ -19,14 +19,16 @@ export async function submitLegajo(formData: FormData): Promise<{ error?: string
       return { error: 'Verificación de seguridad fallida. Por favor recargá la página e intentá de nuevo.' }
     }
 
-    // Validación server-side del CV
-    if (!cv || cv.size === 0) return { error: 'CV requerido' }
-    if (cv.type !== 'application/pdf') return { error: 'El CV debe ser un archivo PDF' }
-    if (cv.size > MAX_CV_SIZE) return { error: 'El CV no puede superar los 5 MB' }
+    // Validación server-side de archivos
+    if (!archivos.length || archivos[0].size === 0) return { error: 'CV requerido' }
+    for (const archivo of archivos) {
+      if (archivo.type !== 'application/pdf') return { error: `"${archivo.name}" debe ser un archivo PDF` }
+      if (archivo.size > MAX_CV_SIZE) return { error: `"${archivo.name}" no puede superar los 5 MB` }
+    }
 
-    // Subir CV a SharePoint (fuera de la transacción de DB)
+    // Subir archivos a SharePoint (fuera de la transacción de DB)
     const token = await getGraphToken()
-    const urlCv = await uploadCvToSharePoint(cv, token)
+    const urlCv = await uploadFilesToSharePoint(archivos, token, isPostulante, data.pais, data.provincia, data.dni)
 
     // Todo lo de DB dentro de una transacción
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {

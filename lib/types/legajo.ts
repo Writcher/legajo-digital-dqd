@@ -42,7 +42,7 @@ export type LegajoFormData = {
   disponibilidad: number | '';
   idiomas: number[];
   observaciones: string;
-  cv: File | null;
+  archivos: File[];
 };
 
 export type FormPayload = {

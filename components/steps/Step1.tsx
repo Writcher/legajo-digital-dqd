@@ -71,7 +71,7 @@ export default function Step1({
       <FormSelect name='provincia' control={form.control} label='Provincia / Estado / Región *' rules={{ required: 'Debe seleccionar su provincia' }} options={provincias.data ?? []} disabled={form.watch('pais') === ''} isLoading={provincias.isLoading} />
       {/* convenio - solo empleados */}
       {!isPostulante && <>
-        <FormSelect name='convenio' control={form.control} label='Tipo de Convenio *' rules={{ required: 'Debe seleccionar un convenio' }} options={tiposConvenio.data?.convenios ?? []} isLoading={tiposConvenio.isLoading} />
+        <FormSelect name='convenio' control={form.control} label='Modalidad de Contratación *' rules={{ required: 'Debe seleccionar un convenio' }} options={tiposConvenio.data?.convenios ?? []} isLoading={tiposConvenio.isLoading} />
         {!tiposConvenio.isLoading && form.watch('convenio') === tiposConvenio.data?.fueraConvenio?.id && <>
           <FormSelect name='area' control={form.control} label='Área / Sector *' rules={{ required: 'Debe seleccionar su área de trabajo' }} options={areas.data ?? []} isLoading={areas.isLoading} />
           <FormField name='puesto' control={form.control} label='Puesto Actual *' rules={{ required: 'Debe ingresar su puesto actual' }} />

@@ -24,33 +24,47 @@ export default function Step6({
   onBack,
   onSuccess,
   refreshTurnstileToken,
+  isPostulante
 }: {
   onBack: () => void;
   onSuccess: (nombre: string) => void;
   refreshTurnstileToken: () => Promise<string>;
+  isPostulante: boolean;
 }) {
   // hooks
   const { showWarning, showSuccess, showError } = useSnackbar();
   const form = useFormContext<LegajoFormData>();
   const idiomas = useWatch({ control: form.control, name: 'idiomas' });
   const disponibilidadSeleccionada = useWatch({ control: form.control, name: 'disponibilidad' });
-  const cv = useWatch({ control: form.control, name: 'cv' });
+  const archivos = useWatch({ control: form.control, name: 'archivos' });
   const [dragging, setDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   //helpers
-  function handleCvFile(file: File | null | undefined) {
-    if (!file) return;
-    if (file.type !== 'application/pdf') { showWarning('Solo se aceptan archivos PDF'); return; }
-    if (file.size > MAX_CV_SIZE) { showWarning('El archivo no puede superar los 5 MB'); return; }
-    form.setValue('cv', file, { shouldValidate: true });
+  function handleArchivos(newFiles: FileList | null | undefined) {
+    if (!newFiles) return;
+    const current = form.getValues('archivos');
+    const toAdd: File[] = [];
+    for (const file of Array.from(newFiles)) {
+      if (file.type !== 'application/pdf') { showWarning(`"${file.name}" no es un PDF`); continue; }
+      if (file.size > MAX_CV_SIZE) { showWarning(`"${file.name}" supera los 5 MB`); continue; }
+      if (current.some(f => f.name === file.name && f.size === file.size)) { showWarning(`"${file.name}" ya fue adjuntado`); continue; }
+      toAdd.push(file);
+    }
+    if (toAdd.length) form.setValue('archivos', [...current, ...toAdd], { shouldValidate: true });
+    // Reset input para permitir seleccionar el mismo archivo de nuevo
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+  function removeArchivo(index: number) {
+    const current = form.getValues('archivos');
+    form.setValue('archivos', current.filter((_, i) => i !== index), { shouldValidate: true });
   }
   async function handleSubmit() {
     // Evita envíos duplicados si el usuario hace doble click
     if (submittingRef.current) return;
     // Validaciones manuales antes de enviar
-    if (!cv) { showWarning('Por favor adjuntá tu CV'); return; }
+    if (!archivos.length) { showWarning('Por favor adjuntá al menos el CV'); return; }
     if (!disponibilidadSeleccionada) { showWarning('Por favor seleccioná tu disponibilidad para viajar'); return; }
     // Marca el envío como en curso (ref + state para UI)
     submittingRef.current = true;
@@ -62,16 +76,16 @@ export default function Step6({
       const values = form.getValues();
       // Arma el FormData para enviar al server action
       const fd = new FormData();
-      // Adjunta el archivo PDF del CV
-      fd.append('cv', values.cv!);
+      // Adjunta cada archivo PDF
+      for (const archivo of values.archivos) fd.append('archivos', archivo);
       // Adjunta el token fresco de Turnstile para verificación server-side
       fd.append('turnstileToken', freshToken);
-      // Separa el CV del resto de los datos (el CV ya se adjuntó como archivo)
-      const { cv: _cv, ...rest } = values;
+      // Separa los archivos del resto de los datos
+      const { archivos: _archivos, ...rest } = values;
       // Adjunta el resto de los datos como JSON
       fd.append('data', JSON.stringify(rest));
       // Llama al server action que guarda el legajo en la base de datos
-      const result = await submitLegajo(fd);
+      const result = await submitLegajo(fd, isPostulante);
       // Si el server devuelve un error, lo lanza para que lo atrape el catch
       if (result.error) throw new Error(result.error);
       // Muestra feedback de éxito y navega a la pantalla de confirmación
@@ -178,27 +192,42 @@ export default function Step6({
       </div>
       <FormField name='observaciones' control={form.control}  multiline rows={5}/>
       <div className='text-sm text-gray-700 leading-tight'>
-        CV en PDF *
+        CV y Certificaciones en PDF *
       </div>
+      {archivos.length > 0 && (
+        <div className='flex flex-col gap-1'>
+          {archivos.map((file, index) => (
+            <div key={`${file.name}-${file.size}`} className='flex items-center gap-2 px-3 py-2 rounded border border-gray-200 bg-white'>
+              <InsertDriveFileRoundedIcon className='!text-base !text-orange-400' />
+              <span className='text-sm text-gray-700 flex-1 truncate'>{file.name}</span>
+              <span className='text-xs text-gray-400'>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+              <CloseRoundedIcon
+                className='!text-base !text-gray-400 cursor-pointer hover:!text-red-500'
+                onClick={() => removeArchivo(index)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
       <div
         onClick={() => fileInputRef.current?.click()}
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); handleCvFile(e.dataTransfer.files[0]); }}
-        className={`flex flex-col items-center justify-center gap-2 rounded border cursor-pointer py-8 transition-colors ${(dragging || cv) ? 'border-orange-400 bg-orange-50' : 'border-gray-300 border-dashed bg-gray-50 hover:bg-gray-100'}`}
+        onDrop={e => { e.preventDefault(); setDragging(false); handleArchivos(e.dataTransfer.files); }}
+        className={`flex flex-col items-center justify-center gap-2 rounded border cursor-pointer py-8 transition-colors ${dragging ? 'border-orange-400 bg-orange-50' : 'border-gray-300 border-dashed bg-gray-50 hover:bg-gray-100'}`}
       >
         <InsertDriveFileRoundedIcon className='!text-4xl !text-gray-400' />
-        {cv
-          ? <span className='text-sm text-gray-700 font-medium'>{cv.name}</span>
-          : <span className='text-sm text-gray-500'>Tocá para adjuntar tu CV</span>
-        }
-        <span className='text-xs text-orange-500'>Solo archivos PDF · Máx. 5 MB</span>
+        <span className='text-sm text-gray-500'>
+          {archivos.length ? 'Agregar otro archivo' : 'Tocá para adjuntar'}
+        </span>
+        <span className='text-xs text-orange-500'>Solo archivos PDF · Máx. 5 MB por archivo</span>
         <input
           ref={fileInputRef}
           type='file'
           accept='application/pdf'
+          multiple
           className='hidden'
-          onChange={e => handleCvFile(e.target.files?.[0])}
+          onChange={e => handleArchivos(e.target.files)}
         />
       </div>
     </StepWrapper>

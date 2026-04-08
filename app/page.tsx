@@ -68,7 +68,7 @@ export default function Home() {
       disponibilidad: '',
       idiomas: [],
       observaciones: '',
-      cv: null
+      archivos: []
     }
   });
   if (formType === null) {
@@ -126,7 +126,7 @@ export default function Home() {
             {activeStep === 2 && <Step3 onNext={next} onBack={back} />}
             {activeStep === 3 && <Step4 onNext={next} onBack={back} />}
             {activeStep === 4 && <Step5 onNext={next} onBack={back} />}
-            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} refreshTurnstileToken={refreshTurnstileToken} />}
+            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} refreshTurnstileToken={refreshTurnstileToken} isPostulante={formType === 'postulante'}/>}
           </FormProvider>
         </div>
       </div>
