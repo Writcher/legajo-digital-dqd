@@ -8,16 +8,14 @@ import Step3 from '@/components/steps/Step3';
 import Step4 from '@/components/steps/Step4';
 import Step5 from '@/components/steps/Step5';
 import Step6 from '@/components/steps/Step6';
-import LandingPage from '@/components/landing';
 import { FormProvider, useForm } from 'react-hook-form';
 import { LegajoFormData } from '@/lib/types/legajo';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
-export default function Home() {
-  //state
-  const [formType, setFormType] = useState<'empleado' | 'postulante' | null>(null);
+export default function FormPage({ formType }: { formType: 'empleado' | 'postulante' }) {
   const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [activeStep, setActiveStep] = useState(0);
+  const [submittedName, setSubmittedName] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const tokenResolverRef = useRef<((token: string) => void) | null>(null);
 
@@ -35,14 +33,13 @@ export default function Home() {
       turnstileRef.current?.reset();
     });
   }, []);
-  const [submittedName, setSubmittedName] = useState<string | null>(null);
+
   const next = () => setActiveStep((s) => s + 1);
   const back = () => setActiveStep((s) => s - 1);
-  //hooks
+
   const form = useForm<LegajoFormData>({
     mode: 'onTouched',
     defaultValues: {
-      //step1
       nombre: '',
       dni: '',
       telefono: '',
@@ -52,38 +49,20 @@ export default function Home() {
       convenio: '',
       area: '',
       puesto: '',
-      //step2
       habilidades: [],
       habilidadesPersonalizadas: [],
-      //step3
       herramientas: [],
       herramientasPersonalizadas: [],
-      //step4
       experiencias: [],
-      //step5
       educaciones: [],
       certificaciones: [],
       licencias: [],
-      //step6
       disponibilidad: '',
       idiomas: [],
       observaciones: '',
       archivos: []
     }
   });
-  if (formType === null) {
-    return (
-      <LandingPage onSelect={(type) => setFormType(type)} token={turnstileToken}>
-        <Turnstile
-          ref={turnstileRef}
-          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-          onSuccess={handleTurnstileSuccess}
-          onExpire={() => setTurnstileToken('')}
-          onError={() => setTurnstileToken('')}
-        />
-      </LandingPage>
-    );
-  }
 
   if (submittedName !== null) {
     return (
@@ -99,6 +78,21 @@ export default function Home() {
             Gracias <span className='font-medium text-gray-700'>{submittedName}</span>, tu legajo fue recibido correctamente.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (!turnstileToken) {
+    return (
+      <div className='flex flex-col flex-1 items-center justify-center gap-4 px-4'>
+        <p className='text-sm text-gray-500'>Verificando que sos humano...</p>
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+          onSuccess={handleTurnstileSuccess}
+          onExpire={() => setTurnstileToken('')}
+          onError={() => setTurnstileToken('')}
+        />
       </div>
     );
   }
@@ -126,7 +120,14 @@ export default function Home() {
             {activeStep === 2 && <Step3 onNext={next} onBack={back} />}
             {activeStep === 3 && <Step4 onNext={next} onBack={back} />}
             {activeStep === 4 && <Step5 onNext={next} onBack={back} />}
-            {activeStep === 5 && <Step6 onBack={back} onSuccess={(nombre) => setSubmittedName(nombre)} refreshTurnstileToken={refreshTurnstileToken} isPostulante={formType === 'postulante'}/>}
+            {activeStep === 5 && (
+              <Step6
+                onBack={back}
+                onSuccess={(nombre) => setSubmittedName(nombre)}
+                refreshTurnstileToken={refreshTurnstileToken}
+                isPostulante={formType === 'postulante'}
+              />
+            )}
           </FormProvider>
         </div>
       </div>
