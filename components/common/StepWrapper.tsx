@@ -76,7 +76,7 @@ export default function StepWrapper({
                         color='success'
                         fullWidth
                         disableElevation
-                        disabled={isSubmitting || mounted ? !isValid : false}
+                        disabled={isSubmitting || (mounted ? !isValid : false)}
                         startIcon={<CheckRoundedIcon />}
                         onClick={onSubmit}
                     >
