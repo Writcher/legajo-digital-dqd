@@ -48,7 +48,7 @@ export async function uploadFilesToSharePoint(files: File[], token: string, isPo
   if (!drive) throw new Error(`Biblioteca "${libraryName}" no encontrada en "${siteName}"`)
 
   const baseName = `${Date.now()}_${dni}`
-  const basePath = `${uploadPath}/${pais}/${provincia}`
+  const basePath = `${uploadPath}/${pais!.nombre}/${provincia!.nombre}`
 
   if (files.length === 1) {
     // Un solo archivo: sube suelto como antes
